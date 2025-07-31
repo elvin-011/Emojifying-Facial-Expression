@@ -1,9 +1,12 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 import gradio as gr
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
-# Load model and face cascade
+# Load model and cascade
 model = load_model('model.h5')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -13,7 +16,6 @@ def detect_emotion(image):
     if image is None:
         return None
 
-    # Convert RGB (from Gradio) to BGR for OpenCV
     image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
@@ -31,13 +33,10 @@ def detect_emotion(image):
         emoji_img = cv2.imread('NofaceDetected.jpeg')
     
     if emoji_img is None:
-        return image_bgr  # fallback if emoji image not found
+        return image_bgr
 
-    # Resize emoji and concatenate with original image
     emoji_img = cv2.resize(emoji_img, (image_bgr.shape[1], image_bgr.shape[0]))
     combined = np.hstack((image_bgr, emoji_img))
-    
-    # Convert back to RGB for Gradio display
     combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
     return combined_rgb
 
