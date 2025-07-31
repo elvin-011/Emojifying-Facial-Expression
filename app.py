@@ -3,15 +3,19 @@ import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
-# Load model and cascade
+# Load model and face cascade
 model = load_model('model.h5')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 def detect_emotion(image):
-    # Convert to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if image is None:
+        return None
+
+    # Convert RGB (from Gradio) to BGR for OpenCV
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
     if len(faces) > 0:
@@ -27,19 +31,22 @@ def detect_emotion(image):
         emoji_img = cv2.imread('NofaceDetected.jpeg')
     
     if emoji_img is None:
-        return image  # fallback if emoji image not found
+        return image_bgr  # fallback if emoji image not found
 
-    # Resize and combine
-    emoji_img = cv2.resize(emoji_img, (image.shape[1], image.shape[0]))
-    combined = np.hstack((image, emoji_img))
-    return combined
+    # Resize emoji and concatenate with original image
+    emoji_img = cv2.resize(emoji_img, (image_bgr.shape[1], image_bgr.shape[0]))
+    combined = np.hstack((image_bgr, emoji_img))
+    
+    # Convert back to RGB for Gradio display
+    combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
+    return combined_rgb
 
 iface = gr.Interface(
     fn=detect_emotion,
-    inputs=gr.Image(type="numpy", label="Upload a Face Image"),
+    inputs=gr.Image(source="webcam", label="Capture Your Face (Click 'Capture')"),
     outputs=gr.Image(type="numpy", label="Image + Emoji"),
     title="Emojifying Facial Expression",
-    description="Upload an image of a face to see the corresponding emoji based on detected emotion."
+    description="Capture a face using webcam or upload an image to see the corresponding emoji based on emotion detected."
 )
 
 if __name__ == "__main__":
