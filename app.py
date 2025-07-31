@@ -10,7 +10,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 def predict_emotion_from_frame(frame):
-    img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, 1.1, 5)
@@ -25,22 +25,19 @@ def predict_emotion_from_frame(frame):
     pred = model.predict(roi)
     idx = pred.argmax()
     emotion = emotions[idx]
-    
+
     emoji_path = f'emojis/{emotion}.jpg'
     return emotion, frame, emoji_path
 
-demo = gr.Interface(
-    fn=predict_emotion_from_frame,
-    inputs=gr.Image(source="webcam", streaming=True),
-    outputs=[
-        gr.Label(label="Predicted Emotion"),
-        gr.Image(label="Live Frame"),
-        gr.Image(label="Emoji")
-    ],
-    live=True,
-    title="😄 Emojifying Facial Expressions (Real-Time-Like)",
-    description="Capture your facial expression in real-time using webcam and get the matching emoji."
-)
+with gr.Blocks() as demo:
+    gr.Markdown("## 😄 Emojifying Facial Expressions (Snapshot via Webcam)")
+    with gr.Row():
+        cam_input = gr.Camera(label="Capture Your Face")
+        label_output = gr.Label(label="Predicted Emotion")
+        emoji_output = gr.Image(label="Emoji")
+    live_image = gr.Image(label="Input Frame")
+
+    cam_input.change(fn=predict_emotion_from_frame, inputs=cam_input, outputs=[label_output, live_image, emoji_output])
 
 if __name__ == "__main__":
     demo.launch()
