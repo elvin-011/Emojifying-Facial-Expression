@@ -1,8 +1,5 @@
-tensorflow
-keras
-numpy
-opencv-python
-matplotlib
-pandas
 gradio>=4.0.0
+opencv-python
+numpy
+tensorflow-cpu
 Pillow
