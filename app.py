@@ -1,40 +1,42 @@
-import gradio as gr
 import cv2
 import numpy as np
-from PIL import Image
+import gradio as gr
 from tensorflow.keras.models import load_model
 
-# Load pre-trained model and cascade
+# Load the model (ensure it's small enough for Hugging Face Spaces)
 model = load_model("model.h5")
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
-def detect_emotion(frame):
-    image = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Load the emoji images in memory
+emoji_images = {emotion: cv2.imread(f"emojis/{emotion}.jpg") for emotion in emotions}
+no_face_img = cv2.imread("NofaceDetected.jpeg")
 
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    if len(faces) == 0:
-        return "No Face", 'emojis/NofaceDetected.jpeg'
-    
-    (x, y, w, h) = faces[0]
-    roi = gray[y:y+h, x:x+w]
-    roi = cv2.resize(roi, (48, 48)) / 255.0
-    roi = roi.reshape(1, 48, 48, 1)
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
-    pred = model.predict(roi)
-    idx = pred.argmax()
-    emotion = emotions[idx]
+def predict_emotion(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
 
-    emoji_path = f'emojis/{emotion}.jpg'
-    return emotion, emoji_path
+    if len(faces) > 0:
+        (x, y, w, h) = faces[0]
+        roi = gray[y:y+h, x:x+w]
+        roi = cv2.resize(roi, (48, 48)) / 255.0
+        roi = roi.reshape(1, 48, 48, 1)
+        pred = model.predict(roi, verbose=0)
+        idx = pred.argmax()
+        emoji = emoji_images[emotions[idx]]
+    else:
+        emoji = no_face_img
 
-with gr.Blocks() as demo:
-    gr.Markdown("# 😊 Real-time Emoji Detection")
-    cam = gr.Image(source="webcam", streaming=True, label="Live Feed")
-    label = gr.Label(label="Predicted Emotion")
-    emoji = gr.Image(label="Emoji Output")
+    frame_resized = cv2.resize(frame, (200, 200))
+    emoji_resized = cv2.resize(emoji, (200, 200))
+    combined = np.hstack((frame_resized, emoji_resized))
+    return cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
 
-    cam.stream(fn=detect_emotion, inputs=cam, outputs=[label, emoji])
-
-demo.launch()
+gr.Interface(
+    fn=predict_emotion,
+    inputs=gr.Image(source="webcam", streaming=True),
+    outputs=gr.Image(label="Live Emotion Recognition"),
+    live=True,
+    title="Real-Time Emoji Emotion Detector"
+).launch()
