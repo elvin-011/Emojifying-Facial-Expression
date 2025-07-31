@@ -14,6 +14,7 @@ def detect_emotion(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
+    emotion = "No face detected"
     if len(faces) > 0:
         (x, y, w, h) = faces[0]
         roi = gray[y:y+h, x:x+w]
@@ -25,21 +26,23 @@ def detect_emotion(image):
         emoji_img = cv2.imread(f'emojis/{emotion}.jpg')
     else:
         emoji_img = cv2.imread('NofaceDetected.jpeg')
-    
-    if emoji_img is None:
-        return image  # fallback if emoji image not found
 
-    # Resize and combine
+    if emoji_img is None:
+        return image, emotion
+
     emoji_img = cv2.resize(emoji_img, (image.shape[1], image.shape[0]))
     combined = np.hstack((image, emoji_img))
-    return combined
+    return combined, f"Detected Emotion: {emotion}"
 
 iface = gr.Interface(
     fn=detect_emotion,
     inputs=gr.Image(type="numpy", label="Upload a Face Image"),
-    outputs=gr.Image(type="numpy", label="Image + Emoji"),
+    outputs=[
+        gr.Image(type="numpy", label="Image + Emoji"),
+        gr.Textbox(label="Detected Emotion")
+    ],
     title="Emojifying Facial Expression",
-    description="Upload an image of a face to see the corresponding emoji based on detected emotion."
+    description="Upload an image of a face to see the corresponding emoji and detected emotion."
 )
 
 if __name__ == "__main__":
