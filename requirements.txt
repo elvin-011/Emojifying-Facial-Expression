@@ -4,3 +4,5 @@ numpy
 opencv-python
 matplotlib
 pandas
+gradio>=4.0.0
+Pillow
